@@ -1,0 +1,17 @@
+Gamekult, l'émission XBMC Plugin
+================================
+
+Weekly french video games news podcast. (http://www.gamekult.com/video?t=emission)[http://www.gamekult.com/video?t=emission]
+
+Installation
+------------
+This plugin is hosted on [https://github.com/sebcbi1/plugin.video.gamekult](https://github.com/sebcbi1/plugin.video.gamekult)
+
+* Clone this to your XBMC addons directory (git clone git://github.com/sebcbi1/plugin.video.gamekult.git ) or download the zip file and extract it.
+* Start XBMC and browse to Videos -> Video Addons.
+
+Contributing
+------------
+
+It's broken ? Just drop me a line on [http://github.com/sebcbi1](http://github.com/sebcbi1).
+
