@@ -1,75 +1,136 @@
 
 import xbmcplugin,xbmcgui,xbmcaddon
 import urllib2,urllib,re,os
+from BeautifulSoup import BeautifulSoup
+
+__settings__ = xbmcaddon.Addon(id='plugin.video.gamekult')
+__home__ = __settings__.getAddonInfo('path')
+
+DEFAULT_THUMB  = xbmc.translatePath( os.path.join( __home__, 'resources/gamekult.png' ) )
+EMISSION_THUMB = xbmc.translatePath( os.path.join( __home__, 'resources/emission.jpg' ) )
+
 
 SITE   = 'http://www.gamekult.com' 
-URL    = '/video?t=emission'
 
 # plugin handle
 HANDLE = int(sys.argv[1])
 
 
-def show_root_menu():
+def getShows():
 
-	pDialog = xbmcgui.DialogProgress()
-  	ret = pDialog.create('Gamekult, l\'émission', 'Retrieving items...', '')
+	addDir('L\'émission',SITE + '/video?t=emission',1, EMISSION_THUMB)
+	addDir('Tests',SITE + '/video?t=test',1, DEFAULT_THUMB)
+	addDir('Gameplay',SITE + '/video?t=gameplay',1, DEFAULT_THUMB)
+	addDir('Trailers',SITE + '/video?t=trailers',1, DEFAULT_THUMB)
+	addDir('Rétro',SITE + '/video?t=retro',1, DEFAULT_THUMB)
 
-    	content        = getUrl(SITE + URL)
-	matched_urls   = re.compile('<li>\\n\\t\\t\\t<a href="(.*?)" class="clearfix clear left w1">.*?</a>', re.DOTALL).findall(content)
-	matched_descr  = re.compile('<span class="tQuiet left clear w100">.+?<br/>(.+?)</span>', re.DOTALL).findall(content)
-	matched_titles = re.compile('<span class="tMedium tLoud tLeft tBlack">(.+?)</span>', re.DOTALL).findall(content)
-	matched_images = re.compile('<span style="background: url\(\'(.+?)\'\) no-repeat scroll center center transparent;" class="left height110 w12 borderS borderGrey"></span>', re.DOTALL).findall(content)
+def getEpisodes(dir_url,name):
+
+    	content = getUrl(dir_url)
+
+	matched_urls  = re.compile('<li>\\n\\t\\t\\t<a href="(.*?)" class="clearfix clear left w1">.*?</a>', re.DOTALL).findall(content)
 	
 	nb_items = len(matched_urls)
+
+	for  url in matched_urls:
+
+		clip  = getClip(getClipXmlUrl(SITE + url))
+
+		if clip is not None:
+			addLink(clip[0],clip[1],clip[2],nb_items)   
+
+def getClipXmlUrl(url):
+	# http://www.gamekult.com/video/marvel-vs-capcom-3-fate-of-two-worlds-annonce-sentinel-10330448v.html
+	id = re.search(r'.+\-(.+?)v\.html',url).group(1)
+	# http://www.gamekult.com/videos/video_xml/10330448-pegi=;jeune=0;-0-bill
+	return "http://www.gamekult.com/videos/video_xml/%s-pegi=;jeune=0;-0-bill" % id
+
+def getClip(url):
+
+	content = getUrl(url)
+	soup = BeautifulSoup(content, convertEntities=BeautifulSoup.XML_ENTITIES)
+	track = soup.findAll('track')[1]
+	title = track.annotation.contents[0].replace('video du jeu','').replace('sur  :','').strip()
+	flv = track.location.contents[0]
+	img = track.image.contents[0]
+	return [title,flv,img]
+
+def get_params():
+
+	param=[]
+	paramstring=sys.argv[2]
+	if len(paramstring)>=2:
+		params=sys.argv[2]
+		cleanedparams=params.replace('?','')
+		if (params[len(params)-1]=='/'):
+			params=params[0:len(params)-2]
+		pairsofparams=cleanedparams.split('&')
+		param={}
+		for i in range(len(pairsofparams)):
+			splitparams={}
+			splitparams=pairsofparams[i].split('=')
+			if (len(splitparams))==2:
+				param[splitparams[0]]=splitparams[1]
 	
-	ret = pDialog.update(0, 'Retrieving items...', '0 of %i' % nb_items)
+	return param
 
-	matched_flvs = []
 
-	for  i, url in enumerate(matched_urls):
+def addLink(name,url,iconimage,nb_items):
+	ok=True
+	liz=xbmcgui.ListItem(name, iconImage="DefaultVideo.png", thumbnailImage=iconimage)
+	liz.setInfo( type="Video", infoLabels={ "Title": name } )
+	ok=xbmcplugin.addDirectoryItem(handle=HANDLE,url=url,listitem=liz, totalItems=nb_items)
+	return ok
 
-		content = getUrl(SITE + url)
-		match=re.compile('<link rel="video_src" href="(.+?)"/>', re.DOTALL).findall(content)
 
-		if len(match)==1:
-		   match2=re.compile('xspf=(.+?)&', re.DOTALL).findall(match[0])
 
-		   if len(match2)==1:
-		      	content = getUrl(match2[0])
-			match3=re.compile('<track>.*<location>(.+?)</location>.*<annotation>.*</annotation>.*</track>', re.DOTALL).findall(content)
-	
-			if len(match3)==1:
-				matched_flvs.append(match3[0])
-				
-				url = matched_urls[i]
-				title = matched_titles[i].strip() 
-				img = matched_images[i]
-				flv = matched_flvs[i]
-				description = matched_descr[i]
-				addLink(title,flv,img,description)          
-	
-		ret = pDialog.update(int((100/nb_items*(i+1))+0.5), 'Retrieving items...', '%i of %i' % ((i+1),nb_items))
-		if pDialog.iscanceled():
-		    return 0
+def addDir(name,url,mode,iconimage):
+	u=sys.argv[0]+"?url="+urllib.quote_plus(url)+"&mode="+str(mode)+"&name="+urllib.quote_plus(name)
+	ok=True
+	liz=xbmcgui.ListItem(name, iconImage="DefaultFolder.png", thumbnailImage=iconimage)
+	liz.setInfo( type="Video", infoLabels={ "Title": name } )
+	ok=xbmcplugin.addDirectoryItem(handle=HANDLE,url=u,listitem=liz,isFolder=True)
+	return ok
 
-	xbmcplugin.endOfDirectory(handle=HANDLE, succeeded=True)
-
-def addLink(name,url,iconimage,description):
-		ok=True
-		liz=xbmcgui.ListItem(name, iconImage="DefaultVideo.png", thumbnailImage=iconimage)
-		liz.setInfo( type="Video", infoLabels={ "Title": name, 'Plot' : description } )
-		ok=xbmcplugin.addDirectoryItem(handle=HANDLE,url=url,listitem=liz)
-		return ok
 
 def getUrl(url):
-    req = urllib2.Request(url)
-    req.addheaders = [('Referer', SITE), ('Mozilla/5.0 (X11; U; Linux x86_64; fr; rv:1.9.2.13) Gecko/20101206 Ubuntu/10.10 (maverick) Firefox/3.6.13')]
-    response = urllib2.urlopen(req)
-    link=response.read()
-    response.close()
-    return link
+	req = urllib2.Request(url)
+	req.addheaders = [('Referer', SITE), ('Mozilla/5.0 (X11; U; Linux x86_64; fr; rv:1.9.2.13) Gecko/20101206 Ubuntu/10.10 (maverick) Firefox/3.6.13')]
+	response = urllib2.urlopen(req)
+	link=response.read()
+	response.close()
+	return link
 
-ok = show_root_menu()
+
+params=get_params()
+url=None
+name=None
+mode=None
+
+try:
+		url=urllib.unquote_plus(params["url"])
+except:
+		pass
+try:
+		name=urllib.unquote_plus(params["name"])
+except:
+		pass
+try:
+		mode=int(params["mode"])
+except:
+		pass
+
+print "Mode: "+str(mode)
+print "URL: "+str(url)
+print "Name: "+str(name)
+
+if mode==None or url==None or len(url)<1:
+	print ""
+	getShows()
+	
+elif mode==1:
+	print ""+url
+	getEpisodes(url,name)
 
 xbmcplugin.endOfDirectory(HANDLE)	
 

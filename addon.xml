@@ -1,7 +1,7 @@
 <?xml version="1.0.1" encoding="UTF-8" standalone="yes"?>
 <addon id="plugin.video.gamekult"
-       name="Gamekult, l'émission"
-       version="1.0.0"
+       name="Gamekult"
+       version="1.1.0"
        provider-name="sebcbi1">
   <requires>
     <import addon="xbmc.python" version="1.0"/>
@@ -11,9 +11,9 @@
   </extension>
   <extension point="xbmc.addon.metadata">
     <platform>all</platform>
-    <summary lang="fr">Gamekult, l'émission</summary>
-    <summary lang="en">Gamekult, l'émission</summary>
-    <description lang="fr"></description>
-    <description lang="en"></description>
+    <summary lang="fr">Gamekult</summary>
+    <summary lang="en">Gamekult</summary>
+    <description lang="fr">Gamekult.com : toute l'actualité du jeu vidéo PC, consoles, mobiles. Les 20 dernières vidéos de chaque catégorie.</description>
+    <description lang="en">Gamekult.com : French video games news. Latest 20 vids in each categories</description>
   </extension>
 </addon>
